@@ -1,7 +1,5 @@
 export type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>
 
-export type Anything = any
-
 export type Color = string
 
 export type TypedArray =
@@ -10,13 +8,13 @@ export type TypedArray =
   Uint32Array  | Int32Array   |
   Float32Array | Float64Array
 
-export type Arrayable<T = Anything> = {
+export type Arrayable<T = any> = {
   readonly length: number
   [n: number]: T
   [Symbol.iterator](): IterableIterator<T>
 }
 
-export type ArrayableOf<T> = T extends any ? Arrayable<T> : never
+export type ArrayableOf<T> = T extends unknown ? Arrayable<T> : never
 
 export type Data = {[key: string]: Arrayable<unknown>}
 
