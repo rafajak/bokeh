@@ -492,11 +492,7 @@ export class PlotView extends LayoutDOMView {
       // Sync canvas size
       this.gl.canvas.width = canvas.width
       this.gl.canvas.height = canvas.height
-      // Prepare GL for drawing
       const {ctx: gl} = this.gl
-      gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
-      gl.clearColor(0, 0, 0, 0)
-      gl.clear(gl.COLOR_BUFFER_BIT || gl.DEPTH_BUFFER_BIT)
       // Clipping
       gl.enable(gl.SCISSOR_TEST)
       const [sx, sy, w, h] = frame_box
@@ -509,9 +505,18 @@ export class PlotView extends LayoutDOMView {
       gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE_MINUS_DST_ALPHA, gl.ONE)   // premultipliedAlpha == true
     }
   }
-      //gl.blendFuncSeparate(gl.ONE_MINUS_DST_ALPHA, gl.DST_ALPHA, gl.ONE_MINUS_DST_ALPHA, gl.ONE)  # Without premultipliedAlpha == false
 
-  blit_webgl(ratio: number): void {
+  clear_webgl(): void {
+    if (this.gl != null) {
+      // Prepare GL for drawing
+      const {ctx: gl} = this.gl
+      gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
+      gl.clearColor(0, 0, 0, 0)
+      gl.clear(gl.COLOR_BUFFER_BIT || gl.DEPTH_BUFFER_BIT)
+    }
+  }
+
+  blit_webgl(): void {
     // This should be called when the ctx has no state except the HIDPI transform
     const {ctx} = this.canvas_view
     if (this.gl != null) {
@@ -523,6 +528,7 @@ export class PlotView extends LayoutDOMView {
       ctx.drawImage(this.gl.canvas, 0, 0)
       // Set back hidpi transform
       ctx.save()
+      const ratio = this.canvas.pixel_ratio
       ctx.scale(ratio, ratio)
       ctx.translate(0.5, 0.5)
     }
@@ -1074,7 +1080,6 @@ export class PlotView extends LayoutDOMView {
     ctx.restore()
 
     this._paint_levels(ctx, ['image', 'underlay', 'glyph'], frame_box, true)
-    this.blit_webgl(ratio)
     this._paint_levels(ctx, ['annotation'], frame_box, false)
     this._paint_levels(ctx, ['overlay'], frame_box, false)
 
@@ -1085,14 +1090,6 @@ export class PlotView extends LayoutDOMView {
   }
 
   protected _paint_levels(ctx: Context2d, levels: RenderLevel[], clip_region: FrameBox, global_clip: boolean): void {
-    ctx.save()
-
-    if (global_clip) {
-      ctx.beginPath()
-      ctx.rect.apply(ctx, clip_region)
-      ctx.clip()
-    }
-
     for (const level of levels) {
       for (const renderer of this.computed_renderers) {
         if (renderer.level != level)
@@ -1100,22 +1097,17 @@ export class PlotView extends LayoutDOMView {
 
         const renderer_view = this.renderer_views[renderer.id]
 
-        if (!global_clip && renderer_view.needs_clip) {
-          ctx.save()
+        ctx.save()
+        if (global_clip || renderer_view.needs_clip) {
           ctx.beginPath()
-          ctx.rect.apply(ctx, clip_region)
+          ctx.rect(...clip_region)
           ctx.clip()
         }
 
         renderer_view.render()
-
-        if (!global_clip && renderer_view.needs_clip) {
-          ctx.restore()
-        }
+        ctx.restore()
       }
     }
-
-    ctx.restore()
   }
 
   protected _map_hook(_ctx: Context2d, _frame_box: FrameBox): void {}

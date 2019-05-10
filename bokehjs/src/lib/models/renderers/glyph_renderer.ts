@@ -207,6 +207,9 @@ export class GlyphRendererView extends DataRendererView {
     }
     const dtmask = Date.now() - tmask
 
+    if (glsupport)
+      this.plot_view.clear_webgl()
+
     const {ctx} = this.plot_view.canvas_view
     ctx.save()
 
@@ -343,7 +346,10 @@ export class GlyphRendererView extends DataRendererView {
     }
     logger.trace(` - glyph renders finished in  : ${dtrender}ms`)
 
-    return ctx.restore()
+    ctx.restore()
+
+    if (glsupport)
+      this.plot_view.blit_webgl()
   }
 
   draw_legend(ctx: Context2d, x0: number, x1: number, y0: number, y1: number, field: string | null, label: string, index: number | null): void {
